@@ -11,13 +11,24 @@ router.get("/books", async (req, res) => {
 });
 
 router.post("/books", async (req, res) => {
-  const { title, author, description } = req.body;
-  await books.create({
-    title,
-    author,
-    description,
+  const page = parseInt(req.query.page) || 1; // current page number
+  const limit = parseInt(req.query.limit) || 10; // items per page
+
+  const skip = (page - 1) * limit;
+
+  const totalBooks = await books.countDocuments();
+  const booksList = await books.find().skip(skip).limit(limit);
+
+  const totalPages = Math.ceil(totalBooks / limit);
+
+  return res.json({
+    success: true,
+    books: booksList,
+    user: req.user,
+    currentPage: page,
+    totalPages,
+    totalBooks,
   });
-  return res.redirect("/books");
 });
 
 // get book details by id
@@ -26,7 +37,8 @@ router.get("/books/:id", async (req, res) => {
   if (!book) {
     return res.status(404).send("Book not found");
   }
-  return res.json("bookDetails", {
+  return res.json({
+    success: true,
     book,
     user: req.user,
   });
